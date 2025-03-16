@@ -1,165 +1,77 @@
-/* eslint-disable no-bitwise */
-import { useMemo, useState } from "react";
-import { PermissionsAndroid, Platform } from "react-native";
-
-import * as ExpoDevice from "expo-device";
-
-import base64 from "react-native-base64";
-import {
-  BleError,
-  BleManager,
-  Characteristic,
-  Device,
-} from "react-native-ble-plx";
-
-const DATA_SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
-const COLOR_CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1217";
+import { useState, useEffect } from "react";
+import { BleManager, Device } from "react-native-ble-plx";
 
 const bleManager = new BleManager();
 
-function useBLE() {
+const useBLE = () => {
   const [allDevices, setAllDevices] = useState<Device[]>([]);
-  const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
-  const [color, setColor] = useState("white");
+  const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null); // Armazenar o dispositivo selecionado
 
-  const requestAndroid31Permissions = async () => {
-    const bluetoothScanPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
-    const bluetoothConnectPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
-    const fineLocationPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
+  useEffect(() => {
+    checkConnectedDevices();
+  }, []);
 
-    return (
-      bluetoothScanPermission === "granted" &&
-      bluetoothConnectPermission === "granted" &&
-      fineLocationPermission === "granted"
-    );
+  const scanForPeripherals = async () => {
+    setScanning(true);
+    setErrorMessage(null);
+    setAllDevices([]);
+
+    bleManager.startDeviceScan(null, null, (error, device) => {
+      if (error) {
+        console.log("❌ Erro ao escanear dispositivos:", error);
+        setErrorMessage("Erro ao escanear dispositivos.");
+        setScanning(false);
+        return;
+      }
+      if (device?.name && !allDevices.find((d) => d.id === device.id)) {
+        console.log("📡 Encontrado:", device.name);
+        setAllDevices((prevDevices) => [...prevDevices, device]);
+      }
+    });
+
+    setTimeout(() => {
+      bleManager.stopDeviceScan();
+      setScanning(false);
+      if (allDevices.length === 0) {
+        setErrorMessage("Nenhum dispositivo encontrado.");
+      }
+    }, 8000);
   };
 
-  const requestPermissions = async () => {
-    if (Platform.OS === "android") {
-      if ((ExpoDevice.platformApiLevel ?? -1) < 31) {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: "Location Permission",
-            message: "Bluetooth Low Energy requires Location",
-            buttonPositive: "OK",
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } else {
-        const isAndroid31PermissionsGranted =
-          await requestAndroid31Permissions();
-
-        return isAndroid31PermissionsGranted;
-      }
-    } else {
-      return true;
-    }
+  const checkConnectedDevices = async () => {
+    const devices = await bleManager.connectedDevices([]);
+    console.log(
+      "🔵 Dispositivos já conectados:",
+      devices.map((d) => d.name)
+    );
+    setConnectedDevices(devices);
   };
 
   const connectToDevice = async (device: Device) => {
     try {
-      const deviceConnection = await bleManager.connectToDevice(device.id);
-      setConnectedDevice(deviceConnection);
-      await deviceConnection.discoverAllServicesAndCharacteristics();
-      bleManager.stopDeviceScan();
-
-      startStreamingData(deviceConnection);
-    } catch (e) {
-      console.log("FAILED TO CONNECT", e);
-    }
-  };
-
-  const isDuplicteDevice = (devices: Device[], nextDevice: Device) =>
-    devices.findIndex((device) => nextDevice.id === device.id) > -1;
-
-  const scanForPeripherals = () =>
-    bleManager.startDeviceScan(null, null, (error, device) => {
-      if (error) {
-        console.log(error);
-      }
-
-      if (
-        device &&
-        (device.localName === "Arduino" || device.name === "Arduino")
-      ) {
-        setAllDevices((prevState: Device[]) => {
-          if (!isDuplicteDevice(prevState, device)) {
-            return [...prevState, device];
-          }
-          return prevState;
-        });
-      }
-    });
-
-  const onDataUpdate = (
-    error: BleError | null,
-    characteristic: Characteristic | null
-  ) => {
-    if (error) {
-      console.log(error);
-      return;
-    } else if (!characteristic?.value) {
-      console.log("No Data was received");
-      return;
-    }
-
-    const colorCode = base64.decode(characteristic.value);
-
-    let color = "white";
-    if (colorCode === "B") {
-      color = "blue";
-    } else if (colorCode === "R") {
-      color = "red";
-    } else if (colorCode === "G") {
-      color = "green";
-    }
-
-    setColor(color);
-  };
-
-  const startStreamingData = async (device: Device) => {
-    if (device) {
-      device.monitorCharacteristicForService(
-        DATA_SERVICE_UUID,
-        COLOR_CHARACTERISTIC_UUID,
-        onDataUpdate
-      );
-    } else {
-      console.log("No Device Connected");
+      console.log("🔗 Conectando ao dispositivo:", device.name);
+      const connectedDevice = await bleManager.connectToDevice(device.id);
+      setConnectedDevices((prevDevices) => [...prevDevices, connectedDevice]);
+      setSelectedDevice(connectedDevice); // Armazena o dispositivo selecionado
+      console.log("✅ Conectado:", connectedDevice.name);
+    } catch (error) {
+      console.log("❌ Erro ao conectar:", error);
+      setErrorMessage("Erro ao conectar ao dispositivo.");
     }
   };
 
   return {
-    connectToDevice,
     allDevices,
-    connectedDevice,
-    color,
-    requestPermissions,
+    connectedDevices,
+    scanning,
+    errorMessage,
     scanForPeripherals,
-    startStreamingData,
+    connectToDevice,
+    selectedDevice, // Adiciona o dispositivo selecionado
   };
-}
+};
 
 export default useBLE;
