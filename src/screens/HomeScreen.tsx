@@ -1,3 +1,4 @@
+// HomeScreen.tsx
 import React from "react";
 import {
   View,
@@ -8,16 +9,41 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons"; // Importando ícones
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-const HomeScreen: React.FC = () => {
+const HomeScreen = ({ navigation }) => {
   const buttons = [
-    { id: 1, label: "Controlar Placar", icon: "scoreboard" },
-    { id: 2, label: "Preencher Súmula", icon: "file-document-edit" },
-    { id: 3, label: "Histórico Jogos", icon: "history" },
-    { id: 4, label: "Construir Tabela", icon: "table-large" },
-    { id: 5, label: "Sortear Times", icon: "shuffle-variant" },
-    { id: 6, label: "Consultar Regulamentos", icon: "book-open-variant" },
+    {
+      id: 1,
+      label: "Controlar Placar",
+      icon: "scoreboard",
+      onPress: () => navigation.navigate("ConnectionBT"), // Navega para ConnectionBT
+    },
+    {
+      id: 2,
+      label: "Preencher Súmula",
+      icon: "file-document-edit",
+      onPress: () => {},
+    },
+    { id: 3, label: "Histórico Jogos", icon: "history", onPress: () => {} },
+    {
+      id: 4,
+      label: "Construir Tabela",
+      icon: "table-large",
+      onPress: () => {},
+    },
+    {
+      id: 5,
+      label: "Sortear Times",
+      icon: "shuffle-variant",
+      onPress: () => {},
+    },
+    {
+      id: 6,
+      label: "Consultar Regulamentos",
+      icon: "book-open-variant",
+      onPress: () => {},
+    },
   ];
 
   return (
@@ -34,7 +60,11 @@ const HomeScreen: React.FC = () => {
         <View style={styles.container1}>
           <View style={styles.buttonGrid}>
             {buttons.map((btn) => (
-              <TouchableOpacity key={btn.id} style={styles.button}>
+              <TouchableOpacity
+                key={btn.id}
+                style={styles.button}
+                onPress={btn.onPress} // Passa a função onPress
+              >
                 <MaterialCommunityIcons
                   name={btn.icon}
                   size={32}
@@ -97,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    width: "100%", // Garante que ocupe toda a largura
+    width: "100%",
   },
   button: {
     backgroundColor: "#023E73",
