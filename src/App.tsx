@@ -2,13 +2,19 @@
 import React, { useState } from "react";
 import { View, StyleSheet, StatusBar, Platform } from "react-native";
 import HomeScreen from "./screens/HomeScreen";
-import ConnectionBT from "./screens/ConnectionBT"; // Importe a tela ConnectionBT
+import ConnectionBT from "./screens/ConnectionBT";
+import PlacarEletronico from "./screens/PlacarEletronico";
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState("Home");
+  const [currentScreen, setCurrentScreen] = useState("PlacarEletronico"); //pagina entrada
 
   const navigateTo = (screen) => {
     setCurrentScreen(screen);
+  };
+
+  const navigation = {
+    navigate: navigateTo,
+    goBack: () => navigateTo("Home"),
   };
 
   return (
@@ -19,11 +25,12 @@ const App = () => {
         barStyle="light-content"
       />
       <View style={styles.topSection}>
-        {currentScreen === "Home" && (
-          <HomeScreen navigation={{ navigate: navigateTo }} />
-        )}
+        {currentScreen === "Home" && <HomeScreen navigation={navigation} />}
         {currentScreen === "ConnectionBT" && (
-          <ConnectionBT navigation={{ goBack: () => navigateTo("Home") }} />
+          <ConnectionBT navigation={navigation} />
+        )}
+        {currentScreen === "PlacarEletronico" && (
+          <PlacarEletronico navigation={navigation} />
         )}
       </View>
       <View style={styles.bottomSection} />
