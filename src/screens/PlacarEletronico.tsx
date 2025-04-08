@@ -7,8 +7,15 @@ import {
   View,
   ScrollView,
 } from "react-native";
+import { useBLEContext } from "../hooks/BLEContext";
+import { gerarPacoteBase64 } from "../screens/placarBluetooth";
 
 const PlacarEletronico = ({ navigation }) => {
+  const { sendCommandToDevice, selectedDevice } = useBLEContext();
+
+  //adicionar um log para ver se o selectDevice está correto
+  // console.log("selectedDevice:", selectedDevice);
+
   // Estados para a Equipe A
   const [pontosA, setPontosA] = useState(0);
   const [setFaltasA, setSetFaltasA] = useState(0);
@@ -56,8 +63,6 @@ const PlacarEletronico = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Placar Eletrônico</Text>
-
       {/* Container principal (Equipe A e Equipe B) */}
       <View style={styles.mainContainer}>
         {/* Equipe A */}
@@ -70,7 +75,20 @@ const PlacarEletronico = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() => setPontosA(pontosA + 1)}
+            onPress={() => {
+              if (!selectedDevice) {
+                console.warn("Nenhum dispositivo conectado.");
+                return;
+              }
+              const gols = pontosA + 1;
+              setPontosA(gols);
+
+              const pacote = gerarPacoteBase64(gols);
+              console.log("Gols esperados:", gols);
+              console.log("Pacote enviado:", pacote);
+
+              sendCommandToDevice(pacote);
+            }}
           >
             <Text style={styles.buttonText}>+1 Ponto</Text>
           </TouchableOpacity>
@@ -85,9 +103,6 @@ const PlacarEletronico = ({ navigation }) => {
             onPress={() => setPedidoTempoA(pedidoTempoA + 1)}
           >
             <Text style={styles.buttonText}>+1 Pedido de Tempo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={alternarServico}>
-            <Text style={styles.buttonText}>Alternar Serviço</Text>
           </TouchableOpacity>
         </View>
 
@@ -118,6 +133,14 @@ const PlacarEletronico = ({ navigation }) => {
             <Text style={styles.buttonText}>+1 Pedido de Tempo</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.servico}>
+        <TouchableOpacity style={styles.button} onPress={alternarServico}>
+          <Text style={styles.buttonText}>
+            {servicoA === "Sim" ? "Serviço A" : "Serviço B"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Controles Gerais */}
@@ -193,6 +216,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  servico: {
+    width: "40%",
+    padding: 8,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 10,
+    marginTop: -10,
+    marginLeft: "31%",
   },
   teamName: {
     fontSize: 20,

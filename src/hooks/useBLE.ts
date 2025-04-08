@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BleManager, Device } from "react-native-ble-plx";
-import { PermissionsAndroid, Platform } from "react-native";
+import { PermissionsAndroid, Platform, Alert } from "react-native";
+import { encode as btoa } from "base-64";
 
 const bleManager = new BleManager();
 
@@ -11,27 +12,35 @@ const useBLE = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
-  // Função para parar o escaneamento
+  const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
+  const sendCommandToDevice = async (command: string) => {
+    if (!selectedDevice) {
+      setErrorMessage("Nenhum dispositivo conectado.");
+      return;
+    }
+
+    try {
+      const base64Command = btoa(command);
+      await selectedDevice.writeCharacteristicWithResponseForService(
+        SERVICE_UUID,
+        CHARACTERISTIC_UUID,
+        base64Command
+      );
+      console.log("📤 Comando enviado:", command);
+    } catch (error) {
+      console.error("❌ Erro ao enviar comando:", error);
+      setErrorMessage("Erro ao enviar comando.");
+    }
+  };
+
   const stopScan = () => {
     bleManager.stopDeviceScan();
     setScanning(false);
-    console.log("Escaneamento interrompido.");
+    console.log("🛑 Escaneamento interrompido.");
   };
 
-  // Verifica dispositivos conectados ao iniciar
-  useEffect(() => {
-    checkConnectedDevices();
-    const subscription = bleManager.onStateChange((state) => {
-      if (state === "PoweredOff") Alert.alert("Ligue o Bluetooth");
-    }, true);
-
-    return () => {
-      subscription.remove();
-      stopScan(); // Garante que o escaneamento seja interrompido ao desmontar
-    };
-  }, []);
-
-  // Solicita permissões do Android
   const requestPermissions = async (): Promise<boolean> => {
     if (Platform.OS === "android") {
       try {
@@ -47,74 +56,97 @@ const useBLE = () => {
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } catch (err) {
-        console.warn(err);
+        console.warn("Erro ao solicitar permissão:", err);
         return false;
       }
     }
-    return true; // Para iOS
+    return true;
   };
 
-  // Escaneamento de dispositivos
   const scanForPeripherals = async () => {
-    setAllDevices([]); // Limpa a lista antes de escanear
+    setAllDevices([]);
     setScanning(true);
     setErrorMessage(null);
 
+    const discovered: { [id: string]: Device } = {};
+
     bleManager.startDeviceScan(null, null, (error, device) => {
       if (error) {
-        console.log("Erro:", error);
+        console.error("Erro no scan:", error);
         setErrorMessage(error.message);
         setScanning(false);
         return;
       }
 
       if (device?.name) {
-        // Verifica se o dispositivo já está na lista
-        setAllDevices((prevDevices) => {
-          const deviceExists = prevDevices.some((d) => d.id === device.id);
-          if (!deviceExists) {
-            return [...prevDevices, device]; // Adiciona apenas se não existir
-          }
-          return prevDevices; // Mantém a lista original
-        });
+        discovered[device.id] = device;
+        setAllDevices(Object.values(discovered));
       }
     });
 
     setTimeout(() => {
       stopScan();
-      if (allDevices.length === 0) {
+      if (Object.keys(discovered).length === 0) {
         setErrorMessage("Nenhum dispositivo encontrado.");
       }
     }, 8000);
   };
 
-  // Verifica conexões existentes
   const checkConnectedDevices = async () => {
     try {
-      const devices = await bleManager.connectedDevices([]);
+      // O array vazio não traz nada, usar um array com UUIDs conhecidos se quiser checar
+      const devices = await bleManager.devices([]);
       setConnectedDevices(devices);
     } catch (error) {
-      console.log("Erro ao verificar conexões:", error);
+      console.error("Erro ao verificar conexões:", error);
     }
   };
 
-  // Conexão com dispositivo
   const connectToDevice = async (device: Device) => {
     try {
       console.log("🔗 Conectando ao dispositivo:", device.name);
-      const connectedDevice = await bleManager.connectToDevice(device.id);
-      await connectedDevice.discoverAllServicesAndCharacteristics(); // Descobre serviços e características
 
-      // Atualiza o estado do dispositivo conectado
-      setConnectedDevices((prevDevices) => [...prevDevices, connectedDevice]);
-      setSelectedDevice(connectedDevice); // Armazena o dispositivo selecionado
+      const connectedDevice = await bleManager.connectToDevice(device.id, {
+        autoConnect: true,
+      });
+      await connectedDevice.discoverAllServicesAndCharacteristics();
+
+      setConnectedDevices((prev) => {
+        const exists = prev.some((d) => d.id === connectedDevice.id);
+        return exists ? prev : [...prev, connectedDevice];
+      });
+      setSelectedDevice(connectedDevice);
 
       console.log("✅ Conectado:", connectedDevice.name);
+
+      await connectedDevice.writeCharacteristicWithResponseForService(
+        SERVICE_UUID,
+        CHARACTERISTIC_UUID,
+        btoa("HELLO_TEST")
+      );
+      console.log("📤 Comando de teste enviado após conexão");
     } catch (error) {
-      console.log("❌ Erro ao conectar:", error);
-      setErrorMessage("Erro ao conectar ao dispositivo.");
+      console.error("❌ Erro ao conectar ou enviar comando:", error);
+      setErrorMessage("Erro ao conectar ou enviar comando.");
     }
   };
+
+  useEffect(() => {
+    checkConnectedDevices();
+    const subscription = bleManager.onStateChange((state) => {
+      if (state === "PoweredOff") {
+        Alert.alert(
+          "Bluetooth está desligado",
+          "Por favor, ative o Bluetooth."
+        );
+      }
+    }, true);
+
+    return () => {
+      subscription.remove();
+      stopScan();
+    };
+  }, []);
 
   return {
     allDevices,
@@ -124,8 +156,9 @@ const useBLE = () => {
     selectedDevice,
     scanForPeripherals,
     connectToDevice,
-    stopScan, // Exporta a função stopScan
+    stopScan,
     requestPermissions,
+    sendCommandToDevice,
   };
 };
 

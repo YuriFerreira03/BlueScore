@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import useBLE from "../hooks/useBLE";
+import { useBLEContext } from "../hooks/BLEContext";
 
 const ConnectionBT = ({ navigation }) => {
   const {
@@ -20,7 +20,7 @@ const ConnectionBT = ({ navigation }) => {
     scanForPeripherals,
     stopScan,
     selectedDevice,
-  } = useBLE();
+  } = useBLEContext();
 
   const [isScanning, setIsScanning] = useState(false);
 
