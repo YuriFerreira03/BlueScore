@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useBLEContext } from "../hooks/BLEContext";
-import { gerarPacoteBase64 } from "../screens/placarBluetooth";
+import { Buffer } from "buffer"; // Importando o Buffer do pacote 'buffer'
 
 const PlacarEletronico = ({ navigation }) => {
   const { sendCommandToDevice, selectedDevice } = useBLEContext();
@@ -61,6 +61,33 @@ const PlacarEletronico = ({ navigation }) => {
     setPeriodo("1º Período");
   };
 
+  /**
+   * Envia um único byte de comando ao ESP32 via BLE.
+   * O byte será enviado em Base64, que é o formato que a biblioteca BLE espera.
+   */
+  function arrayBufferToBase64(buffer) {
+    let binary = "";
+    let bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  async function sendCmd(cmd) {
+    if (!selectedDevice) {
+      console.warn("Nenhum dispositivo conectado.");
+      return;
+    }
+    try {
+      // Converte o byte para Base64
+      const base64Cmd = arrayBufferToBase64(Uint8Array.of(cmd));
+      await sendCommandToDevice(base64Cmd);
+    } catch (e) {
+      console.error("Falha ao enviar comando", e);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Container principal (Equipe A e Equipe B) */}
@@ -75,32 +102,30 @@ const PlacarEletronico = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() => {
-              if (!selectedDevice) {
-                console.warn("Nenhum dispositivo conectado.");
-                return;
-              }
-              const gols = pontosA + 1;
-              setPontosA(gols);
-
-              const pacote = gerarPacoteBase64(gols);
-              console.log("Gols esperados:", gols);
-              console.log("Pacote enviado:", pacote);
-
-              sendCommandToDevice(pacote);
+            onPress={async () => {
+              setPontosA(pontosA + 1);
+              await sendCmd(0x01); // comando +1 ponto A
             }}
           >
             <Text style={styles.buttonText}>+1 Ponto</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
-            onPress={() => setSetFaltasA(setFaltasA + 1)}
+            onPress={async () => {
+              setSetFaltasA(setFaltasA + 1);
+              await sendCmd(0x03); // comando +1 set/falta A
+            }}
           >
             <Text style={styles.buttonText}>+1 Set/Falta</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
-            onPress={() => setPedidoTempoA(pedidoTempoA + 1)}
+            onPress={async () => {
+              setPedidoTempoA(pedidoTempoA + 1);
+              await sendCmd(0x05); // comando +1 pedido de tempo A
+            }}
           >
             <Text style={styles.buttonText}>+1 Pedido de Tempo</Text>
           </TouchableOpacity>
