@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
 } from "react-native";
 import { useBLEContext } from "../hooks/BLEContext";
 import { Buffer } from "buffer"; // Importando o Buffer do pacote 'buffer'
@@ -80,9 +79,7 @@ const PlacarEletronico = ({ navigation }) => {
       return;
     }
     try {
-      // Converte o byte para Base64
-      const base64Cmd = arrayBufferToBase64(Uint8Array.of(cmd));
-      await sendCommandToDevice(base64Cmd);
+      await sendCommandToDevice(cmd);
     } catch (e) {
       console.error("Falha ao enviar comando", e);
     }
@@ -90,125 +87,184 @@ const PlacarEletronico = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Container principal (Equipe A e Equipe B) */}
-      <View style={styles.mainContainer}>
-        {/* Equipe A */}
-        <View style={styles.teamContainer}>
-          <Text style={styles.teamName}>Equipe A</Text>
-          <Text style={styles.info}>Pontos: {pontosA}</Text>
-          <Text style={styles.info}>Set/Faltas: {setFaltasA}</Text>
-          <Text style={styles.info}>Pedido de Tempo: {pedidoTempoA}</Text>
-          <Text style={styles.info}>Serviço: {servicoA}</Text>
+      <View style={styles.container}>
+        {/* <View style={styles.placarResumoContainer}> */}
+        <Text style={styles.teamName}>CONTROLADOR</Text>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={async () => {
-              setPontosA(pontosA + 1);
-              await sendCmd(0x01); // comando +1 ponto A
-            }}
-          >
-            <Text style={styles.buttonText}>+1 Ponto</Text>
-          </TouchableOpacity>
+        <View style={styles.row}>
+          {/* Equipe A */}
+          <View style={styles.resumoEquipe}>
+            <Text style={styles.info}>Equipe A</Text>
+            <Text style={styles.info}>Pontos: {pontosA}</Text>
+            <Text style={styles.info}>Set/Faltas: {setFaltasA}</Text>
+            <Text style={styles.info}>P. Tempo: {pedidoTempoA}</Text>
+            <Text style={styles.info}>Serviço: {servicoA}</Text>
+          </View>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={async () => {
-              setSetFaltasA(setFaltasA + 1);
-              await sendCmd(0x03); // comando +1 set/falta A
-            }}
-          >
-            <Text style={styles.buttonText}>+1 Set/Falta</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={async () => {
-              setPedidoTempoA(pedidoTempoA + 1);
-              await sendCmd(0x05); // comando +1 pedido de tempo A
-            }}
-          >
-            <Text style={styles.buttonText}>+1 Pedido de Tempo</Text>
-          </TouchableOpacity>
+          {/* Equipe B */}
+          <View style={styles.resumoEquipe}>
+            <Text style={styles.info}>Equipe B</Text>
+            <Text style={styles.info}>Pontos: {pontosB}</Text>
+            <Text style={styles.info}>Set/Faltas: {setFaltasB}</Text>
+            <Text style={styles.info}>P. Tempo: {pedidoTempoB}</Text>
+            <Text style={styles.info}>Serviço: {servicoB}</Text>
+          </View>
         </View>
 
-        {/* Equipe B */}
-        <View style={styles.teamContainer}>
-          <Text style={styles.teamName}>Equipe B</Text>
-          <Text style={styles.info}>Pontos: {pontosB}</Text>
-          <Text style={styles.info}>Set/Faltas: {setFaltasB}</Text>
-          <Text style={styles.info}>Pedido de Tempo: {pedidoTempoB}</Text>
-          <Text style={styles.info}>Serviço: {servicoB}</Text>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setPontosB(pontosB + 1)}
-          >
-            <Text style={styles.buttonText}>+1 Ponto</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setSetFaltasB(setFaltasB + 1)}
-          >
-            <Text style={styles.buttonText}>+1 Set/Falta</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setPedidoTempoB(pedidoTempoB + 1)}
-          >
-            <Text style={styles.buttonText}>+1 Pedido de Tempo</Text>
-          </TouchableOpacity>
+        <View style={{ marginTop: 15 }}>
+          <View style={styles.resumoEquipe1}>
+            <Text style={styles.info}>Cronômetro: {cronometro}</Text>
+            <Text style={styles.info}>Alarme: {alarme}</Text>
+            <Text style={styles.info}>Período: {periodo}</Text>
+          </View>
         </View>
-      </View>
+        {/* </View> */}
 
-      <View style={styles.servico}>
-        <TouchableOpacity style={styles.button} onPress={alternarServico}>
-          <Text style={styles.buttonText}>
-            {servicoA === "Sim" ? "Serviço A" : "Serviço B"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.mainContainer}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              alignItems: "center",
+              flex: 1,
+            }}
+          >
+            {/*fazer um container para mostrador de placar*/}
 
-      {/* Controles Gerais */}
-      <View style={styles.controlsContainer}>
-        <Text style={styles.info}>Cronômetro: {cronometro}</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => setCronometro("05:00")} // Exemplo de ajuste do cronômetro
-        >
-          <Text style={styles.buttonText}>Iniciar Cronômetro</Text>
-        </TouchableOpacity>
+            <View style={styles.mainContainer}>
+              {/* Equipe A */}
+              <View style={styles.teamContainer}>
+                <Text style={styles.teamName}>EQUIPE A</Text>
 
-        <Text style={styles.info}>Alarme: {alarme}</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() =>
-            setAlarme(alarme === "Ligado" ? "Desligado" : "Ligado")
-          }
-        >
-          <Text style={styles.buttonText}>
-            {alarme === "Ligado" ? "Desligar Alarme" : "Ligar Alarme"}
-          </Text>
-        </TouchableOpacity>
+                {/* SET/FALTAS */}
+                <View style={styles.section}>
+                  <TouchableOpacity
+                    style={styles.circleButton}
+                    onPress={() => {}}
+                  />
+                  <Text style={styles.info}>SET/FALTAS</Text>
+                </View>
 
-        <Text style={styles.info}>Período: {periodo}</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() =>
-            setPeriodo(periodo === "1º Período" ? "2º Período" : "1º Período")
-          }
-        >
-          <Text style={styles.buttonText}>Alternar Período</Text>
-        </TouchableOpacity>
-      </View>
+                {/* SERVIÇO e TEMPO */}
+                <View style={styles.row}>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>SERV</Text>
+                  </View>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>P. TEMP</Text>
+                  </View>
+                </View>
 
-      {/* Botões de Reset e Voltar */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.resetButton} onPress={resetarPlacar}>
-          <Text style={styles.buttonText}>Resetar Placar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={navigation.goBack} style={styles.backButton}>
-          <Text style={styles.buttonText}>Voltar</Text>
-        </TouchableOpacity>
+                {/* +1 e -1 PONTOS */}
+                <View style={styles.row}>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={async () => {
+                        setPontosA(pontosA + 1);
+                        await sendCmd(0x01); // comando +1 ponto A
+                      }}
+                    />
+                    <Text style={styles.info}>+1</Text>
+                  </View>
+                  <Text style={styles.pointsTitle}>PONTOS</Text>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={async () => {
+                        setPontosA(pontosA - 1);
+                        await sendCmd(0x02); // comando -1 ponto A
+                      }}
+                    />
+                    <Text style={styles.info}>-1</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Equipe B */}
+              <View style={styles.teamContainer}>
+                <Text style={styles.teamName}>EQUIPE B</Text>
+
+                {/* SET/FALTAS */}
+                <View style={styles.section}>
+                  <TouchableOpacity
+                    style={styles.circleButton}
+                    onPress={() => {}}
+                  />
+                  <Text style={styles.info}>SET/FALTAS</Text>
+                </View>
+
+                {/* SERVIÇO e TEMPO */}
+                <View style={styles.row}>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>SERV</Text>
+                  </View>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>P. TEMP</Text>
+                  </View>
+                </View>
+
+                {/* +1 e -1 PONTOS */}
+                <View style={styles.row}>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>+1</Text>
+                  </View>
+                  <Text style={styles.pointsTitle}>PONTOS</Text>
+                  <View style={styles.section}>
+                    <TouchableOpacity
+                      style={styles.circleButton}
+                      onPress={() => {}}
+                    />
+                    <Text style={styles.info}>-1</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+        <View style={styles.geralContainer}>
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.circleButton} onPress={() => {}} />
+            <Text style={styles.info}>CRONÔMETRO</Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.circleButton}
+                onPress={() => {}}
+              />
+              <Text style={styles.info}>ALARME</Text>
+            </View>
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.circleButton}
+                onPress={() => {}}
+              />
+              <Text style={styles.info}>PRESET</Text>
+            </View>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -217,30 +273,48 @@ const PlacarEletronico = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f2f2",
-    padding: 10,
+    backgroundColor: "#02253D",
+    padding: 8,
+    marginTop: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 10,
     textAlign: "center",
+    marginBottom: 30,
+    color: "#003366", // azul escuro CEFET
   },
   mainContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
+    justifyContent: "space-around",
+    alignItems: "flex-start",
   },
   teamContainer: {
-    width: "48%",
-    padding: 10,
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "#06568F", // azul forte bonito
+    borderRadius: 20,
+    padding: 20,
+    width: 185,
+    margin: 10,
+    marginTop: 20,
+    height: 300,
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.8,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+  },
+  circleButton: {
+    width: 35,
+    height: 35,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
   },
   servico: {
     width: "40%",
@@ -252,58 +326,97 @@ const styles = StyleSheet.create({
     marginLeft: "31%",
   },
   teamName: {
-    fontSize: 20,
+    fontSize: 27,
     fontWeight: "bold",
-    marginBottom: 10,
+    color: "#FFFFFF",
     textAlign: "center",
+    marginBottom: 30,
+  },
+  section: {
+    alignItems: "center",
   },
   info: {
-    fontSize: 16,
-    marginBottom: 5,
+    fontSize: 17,
+    color: "#FFFFFF",
     textAlign: "center",
+    fontWeight: "bold",
   },
-  button: {
-    backgroundColor: "#28A745",
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 5,
+  placarResumoContainer: {
+    backgroundColor: "#02253D", // azul forte bonito
+    borderRadius: 20,
+    height: 280,
+    padding: 20,
+    marginHorizontal: 20,
+    marginTop: -10,
     alignItems: "center",
-  },
-  controlsContainer: {
-    padding: 10,
-    backgroundColor: "#fff",
-    borderRadius: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 20,
+    elevation: 5,
   },
-  footer: {
+  resumoEquipe: {
+    flex: 1,
+    backgroundColor: "#06568F", // azul forte bonito
+    borderRadius: 10,
+    padding: 10,
+    marginTop: -10,
+    marginHorizontal: 4,
+    alignItems: "center",
+    gap: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 3,
+    borderColor: "#FFFFFF", // Borda branca
+  },
+  resumoEquipe1: {
+    width: "100%", // ocupa a largura total do container
+    backgroundColor: "#06568F",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    marginTop: -16,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 3,
+    borderColor: "#FFFFFF", // Borda branca
+    shadowColor: "#000", // Cor da sombra
+  },
+  geralContainer: {
+    backgroundColor: "#06568F", // azul forte bonito
+    borderRadius: 20,
+    padding: 20,
+    width: 300,
+    margin: 40,
+    marginTop: 2,
+    height: 160,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  resetButton: {
-    backgroundColor: "#FF6060",
-    padding: 15,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 5,
     alignItems: "center",
+    justifyContent: "space-around",
+    width: "100%",
+    marginVertical: 8,
   },
-  backButton: {
-    backgroundColor: "#FF6060",
-    padding: 15,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 5,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
+  pointsTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    color: "#FFFFFF",
+    marginTop: -20,
+    marginHorizontal: 10,
   },
 });
 

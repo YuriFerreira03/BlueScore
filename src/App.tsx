@@ -6,7 +6,7 @@ import PlacarEletronico from "./screens/PlacarEletronico";
 import { BLEProvider } from "../src/hooks/BLEContext"; // importe o Provider
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState("Home");
+  const [currentScreen, setCurrentScreen] = useState("Home"); //tela de inicio
 
   const navigateTo = (screen) => {
     setCurrentScreen(screen);
@@ -43,16 +43,11 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#023E73",
+    backgroundColor: "#02253D",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   topSection: {
     flex: 1,
-  },
-  bottomSection: {
-    height: 50,
-    backgroundColor: "#FFFF",
-    width: "100%",
   },
 });
 

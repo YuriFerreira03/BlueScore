@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BleManager, Device } from "react-native-ble-plx";
 import { PermissionsAndroid, Platform, Alert } from "react-native";
 import { encode as btoa } from "base-64";
+import { Buffer } from "buffer";
 
 const bleManager = new BleManager();
 
@@ -15,14 +16,14 @@ const useBLE = () => {
   const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
-  const sendCommandToDevice = async (command: string) => {
+  const sendCommandToDevice = async (command: number) => {
     if (!selectedDevice) {
       setErrorMessage("Nenhum dispositivo conectado.");
       return;
     }
 
     try {
-      const base64Command = btoa(command);
+      const base64Command = Buffer.from([command]).toString("base64");
       await selectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         CHARACTERISTIC_UUID,
@@ -122,7 +123,7 @@ const useBLE = () => {
       await connectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         CHARACTERISTIC_UUID,
-        btoa("HELLO_TEST")
+        btoa("\x01")
       );
       console.log("📤 Comando de teste enviado após conexão");
     } catch (error) {
