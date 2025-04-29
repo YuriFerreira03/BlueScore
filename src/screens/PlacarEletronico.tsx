@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   SafeAreaView,
   StyleSheet,
@@ -29,8 +29,29 @@ const PlacarEletronico = ({ navigation }) => {
 
   // Estados para o cronômetro, alarme e período
   const [cronometro, setCronometro] = useState("00:00");
+  const [isRunning, setIsRunning] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [alarme, setAlarme] = useState("Desligado");
   const [periodo, setPeriodo] = useState("1º Período");
+
+  useEffect(() => {
+    if (isRunning) {
+      timerRef.current = setInterval(() => {
+        setCronometro((prev) => {
+          const [m, s] = prev.split(":").map(Number);
+          let total = m * 60 + s + 1;
+          const mm = String(Math.floor(total / 60)).padStart(2, "0");
+          const ss = String(total % 60).padStart(2, "0");
+          return `${mm}:${ss}`;
+        });
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRunning]);
 
   // Função para alternar o serviço entre as equipes
   const alternarServico = () => {
@@ -140,7 +161,10 @@ const PlacarEletronico = ({ navigation }) => {
                 <View style={styles.section}>
                   <TouchableOpacity
                     style={styles.circleButton}
-                    onPress={() => {}}
+                    onPress={async () => {
+                      setSetFaltasA(setFaltasA + 1);
+                      await sendCmd(0x06); // comando -1 ponto A
+                    }}
                   />
                   <Text style={styles.info}>SET/FALTAS</Text>
                 </View>
@@ -150,14 +174,20 @@ const PlacarEletronico = ({ navigation }) => {
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setServicoA(servicoA === "Sim" ? "Não" : "Sim");
+                        await sendCmd(0x05); // comando -1 ponto A
+                      }}
                     />
                     <Text style={styles.info}>SERV</Text>
                   </View>
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setPedidoTempoA(pedidoTempoA + 1);
+                        await sendCmd(0x04);
+                      }}
                     />
                     <Text style={styles.info}>P. TEMP</Text>
                   </View>
@@ -188,7 +218,7 @@ const PlacarEletronico = ({ navigation }) => {
                   </View>
                 </View>
               </View>
-
+              {/* _____________________________________________________________________________________*/}
               {/* Equipe B */}
               <View style={styles.teamContainer}>
                 <Text style={styles.teamName}>EQUIPE B</Text>
@@ -197,7 +227,10 @@ const PlacarEletronico = ({ navigation }) => {
                 <View style={styles.section}>
                   <TouchableOpacity
                     style={styles.circleButton}
-                    onPress={() => {}}
+                    onPress={async () => {
+                      setSetFaltasB(setFaltasB + 1);
+                      await sendCmd(0x07);
+                    }}
                   />
                   <Text style={styles.info}>SET/FALTAS</Text>
                 </View>
@@ -207,14 +240,20 @@ const PlacarEletronico = ({ navigation }) => {
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setServicoB(servicoB === "Sim" ? "Não" : "Sim");
+                        await sendCmd(0x08);
+                      }}
                     />
                     <Text style={styles.info}>SERV</Text>
                   </View>
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setPedidoTempoB(pedidoTempoB + 1);
+                        await sendCmd(0x09);
+                      }}
                     />
                     <Text style={styles.info}>P. TEMP</Text>
                   </View>
@@ -225,7 +264,10 @@ const PlacarEletronico = ({ navigation }) => {
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setPontosB(pontosB + 1);
+                        await sendCmd(0x03);
+                      }}
                     />
                     <Text style={styles.info}>+1</Text>
                   </View>
@@ -233,7 +275,10 @@ const PlacarEletronico = ({ navigation }) => {
                   <View style={styles.section}>
                     <TouchableOpacity
                       style={styles.circleButton}
-                      onPress={() => {}}
+                      onPress={async () => {
+                        setPontosB(pontosB - 1);
+                        await sendCmd(0x0a);
+                      }}
                     />
                     <Text style={styles.info}>-1</Text>
                   </View>
@@ -244,7 +289,13 @@ const PlacarEletronico = ({ navigation }) => {
         </View>
         <View style={styles.geralContainer}>
           <View style={styles.section}>
-            <TouchableOpacity style={styles.circleButton} onPress={() => {}} />
+            <TouchableOpacity
+              style={styles.circleButton1}
+              onPress={async () => {
+                setIsRunning((r) => !r);
+                await sendCmd(0x0b);
+              }}
+            />
             <Text style={styles.info}>CRONÔMETRO</Text>
           </View>
 
@@ -252,16 +303,21 @@ const PlacarEletronico = ({ navigation }) => {
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.circleButton}
-                onPress={() => {}}
+                onPress={async () => {
+                  setAlarme(alarme === "Ligado" ? "Desligado" : "Ligado");
+                  await sendCmd(0x0c);
+                }}
               />
               <Text style={styles.info}>ALARME</Text>
             </View>
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.circleButton}
-                onPress={() => {}}
+                onPress={async () => {
+                  await sendCmd(0x0d);
+                }}
               />
-              <Text style={styles.info}>PRESET</Text>
+              <Text style={styles.info}>RESET</Text>
             </View>
           </View>
         </View>
@@ -309,6 +365,23 @@ const styles = StyleSheet.create({
     height: 35,
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  circleButton1: {
+    width: 200,
+    height: 50,
+    borderRadius: 20,
+    marginTop: -10,
+    //cor vermelha
+    backgroundColor: "#FF0000",
+    //contorno branco
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
     shadowOpacity: 0.8,
     shadowRadius: 4,
     elevation: 5,
