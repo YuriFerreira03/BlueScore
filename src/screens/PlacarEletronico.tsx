@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   SafeAreaView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
+  Alert,
 } from "react-native";
 import { useBLEContext } from "../hooks/BLEContext";
-import { Buffer } from "buffer"; // Importando o Buffer do pacote 'buffer'
+import styles from "../styles/PlacarEletronicoStyles";
 
 const PlacarEletronico = ({ navigation }) => {
   const { sendCommandToDevice, selectedDevice } = useBLEContext();
@@ -19,13 +20,13 @@ const PlacarEletronico = ({ navigation }) => {
   const [pontosA, setPontosA] = useState(0);
   const [setFaltasA, setSetFaltasA] = useState(0);
   const [pedidoTempoA, setPedidoTempoA] = useState(0);
-  const [servicoA, setServicoA] = useState("Não");
+  const [servicoA, setServicoA] = useState("N");
 
   // Estados para a Equipe B
   const [pontosB, setPontosB] = useState(0);
   const [setFaltasB, setSetFaltasB] = useState(0);
   const [pedidoTempoB, setPedidoTempoB] = useState(0);
-  const [servicoB, setServicoB] = useState("Não");
+  const [servicoB, setServicoB] = useState("N");
 
   // Estados para o cronômetro, alarme e período
   const [cronometro, setCronometro] = useState("00:00");
@@ -33,6 +34,8 @@ const PlacarEletronico = ({ navigation }) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [alarme, setAlarme] = useState("Desligado");
   const [periodo, setPeriodo] = useState("1º Período");
+
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
 
   useEffect(() => {
     if (isRunning) {
@@ -55,12 +58,12 @@ const PlacarEletronico = ({ navigation }) => {
 
   // Função para alternar o serviço entre as equipes
   const alternarServico = () => {
-    if (servicoA === "Sim") {
-      setServicoA("Não");
-      setServicoB("Sim");
+    if (servicoA === "S") {
+      setServicoA("N");
+      setServicoB("S");
     } else {
-      setServicoA("Sim");
-      setServicoB("Não");
+      setServicoA("S");
+      setServicoB("N");
     }
   };
 
@@ -69,15 +72,17 @@ const PlacarEletronico = ({ navigation }) => {
     setPontosA(0);
     setSetFaltasA(0);
     setPedidoTempoA(0);
-    setServicoA("Não");
+    setServicoA("N");
 
     setPontosB(0);
     setSetFaltasB(0);
     setPedidoTempoB(0);
-    setServicoB("Não");
+    setServicoB("N");
 
     setCronometro("00:00");
+    setIsRunning(false); // Adicione esta linha para parar o cronômetro
     setAlarme("Desligado");
+    //adicioanr mais periodos
     setPeriodo("1º Período");
   };
 
@@ -106,63 +111,137 @@ const PlacarEletronico = ({ navigation }) => {
     }
   }
 
+  const handlePeriodoPress = async () => {
+    try {
+      // Envia comando para o dispositivo BLE
+      await sendCmd(0x0e);
+
+      // Atualiza o estado local seguindo a sequência correta
+      setPeriodo((prev) => {
+        const periodos = [
+          "1º Período",
+          "2º Período",
+          "3º Período",
+          "4º Período",
+          "5º Período",
+          "TEMPO EXTRA",
+          "PENALTIS",
+        ];
+        const currentIndex = periodos.indexOf(prev);
+        const nextIndex = (currentIndex + 1) % periodos.length;
+        return periodos[nextIndex];
+      });
+    } catch (error) {
+      console.error("Erro ao alterar período:", error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
         {/* <View style={styles.placarResumoContainer}> */}
-        <Text style={styles.teamName}>CONTROLADOR</Text>
+        {/* <Text style={styles.teamName}>CONTROLADOR</Text> */}
 
-        <View style={styles.row}>
-          {/* Equipe A */}
-          <View style={styles.resumoEquipe}>
-            <Text style={styles.info}>Equipe A</Text>
-            <Text style={styles.info}>Pontos: {pontosA}</Text>
-            <Text style={styles.info}>Set/Faltas: {setFaltasA}</Text>
-            <Text style={styles.info}>P. Tempo: {pedidoTempoA}</Text>
-            <Text style={styles.info}>Serviço: {servicoA}</Text>
-          </View>
-
-          {/* Equipe B */}
-          <View style={styles.resumoEquipe}>
-            <Text style={styles.info}>Equipe B</Text>
-            <Text style={styles.info}>Pontos: {pontosB}</Text>
-            <Text style={styles.info}>Set/Faltas: {setFaltasB}</Text>
-            <Text style={styles.info}>P. Tempo: {pedidoTempoB}</Text>
-            <Text style={styles.info}>Serviço: {servicoB}</Text>
-          </View>
+        {/* Substitua os TouchableOpacity existentes por este bloco */}
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={() => setIsDropdownVisible(!isDropdownVisible)}
+          >
+            <Text style={styles.buttonText}>Mostrar Placar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={() => handleGuardarPeriodo()}
+          >
+            <Text style={styles.buttonText}>Guardar PER/JG</Text>
+          </TouchableOpacity>
+          {/* <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={() => handleGuardarJogo()}
+          >
+            <Text style={styles.buttonText}>Guardar Jogo</Text>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.floatingButton1}
+            onPress={() =>
+              Alert.alert("Sair", "Tem certeza que deseja sair?", [
+                {
+                  text: "Cancelar",
+                  style: "cancel",
+                },
+                {
+                  text: "Sair",
+                  onPress: () => navigation.navigate("Home"), // Substitua 'Home' pela sua tela inicial
+                },
+              ])
+            }
+          >
+            <Text style={styles.buttonText}>Sair</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={{ marginTop: 15 }}>
-          <View style={styles.resumoEquipe1}>
-            <Text style={styles.info}>Cronômetro: {cronometro}</Text>
-            <Text style={styles.info}>Alarme: {alarme}</Text>
-            <Text style={styles.info}>Período: {periodo}</Text>
-          </View>
-        </View>
+        {/* Conteúdo do Dropdown */}
+        {isDropdownVisible && (
+          <>
+            <TouchableOpacity
+              style={styles.overlay}
+              activeOpacity={1}
+              onPress={() => setIsDropdownVisible(false)}
+            />
+            <View style={styles.dropdownContainer}>
+              <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.placarResumoContainer}>
+                  <View style={styles.row}>
+                    {/* Equipe A */}
+                    <View style={styles.resumoEquipe}>
+                      <Text style={styles.info1}> Equipe A</Text>
+                      <Text style={styles.info1}> Pontos: {pontosA} </Text>
+                      <Text style={styles.info1}>Set/Flt: {setFaltasA}</Text>
+                      <Text style={styles.info1}>P. Tempo: {pedidoTempoA}</Text>
+                      <Text style={styles.info1}>Serviço: {servicoA}</Text>
+                    </View>
+
+                    {/* Equipe B */}
+                    <View style={styles.resumoEquipe2}>
+                      <Text style={styles.info1}> Equipe B</Text>
+                      <Text style={styles.info1}> Pontos: {pontosB} </Text>
+                      <Text style={styles.info1}>Set/Flt: {setFaltasB}</Text>
+                      <Text style={styles.info1}>P. Tempo: {pedidoTempoB}</Text>
+                      <Text style={styles.info1}>Serviço: {servicoB}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.resumoEquipe1}>
+                    <Text style={styles.info1}>Cronômetro: {cronometro}</Text>
+                    <Text style={styles.info1}>Alarme: {alarme}</Text>
+                    <Text style={styles.info1}>Período: {periodo}</Text>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </>
+        )}
         {/* </View> */}
 
         <View style={styles.mainContainer}>
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-around",
-              alignItems: "center",
               flex: 1,
             }}
           >
             {/*fazer um container para mostrador de placar*/}
 
-            <View style={styles.mainContainer}>
+            <View style={styles.mainContainer1}>
               {/* Equipe A */}
-              <View style={styles.teamContainer}>
+              <View style={[styles.teamContainer, { width: "90%" }]}>
                 <Text style={styles.teamName}>EQUIPE A</Text>
-
                 {/* SET/FALTAS */}
                 <View style={styles.section}>
                   <TouchableOpacity
                     style={styles.circleButton}
                     onPress={async () => {
-                      setSetFaltasA(setFaltasA + 1);
+                      setSetFaltasA((prev) => (prev >= 20 ? 0 : prev + 1));
                       await sendCmd(0x06); // comando -1 ponto A
                     }}
                   />
@@ -175,7 +254,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setServicoA(servicoA === "Sim" ? "Não" : "Sim");
+                        setServicoA(servicoA === "S" ? "N" : "S");
                         await sendCmd(0x05); // comando -1 ponto A
                       }}
                     />
@@ -185,7 +264,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPedidoTempoA(pedidoTempoA + 1);
+                        setPedidoTempoA((prev) => (prev >= 2 ? 0 : prev + 1));
                         await sendCmd(0x04);
                       }}
                     />
@@ -199,7 +278,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPontosA(pontosA + 1);
+                        setPontosA((prev) => (prev >= 199 ? 0 : prev + 1));
                         await sendCmd(0x01); // comando +1 ponto A
                       }}
                     />
@@ -210,7 +289,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPontosA(pontosA - 1);
+                        setPontosA((prev) => (prev > 0 ? prev - 1 : prev));
                         await sendCmd(0x02); // comando -1 ponto A
                       }}
                     />
@@ -220,7 +299,9 @@ const PlacarEletronico = ({ navigation }) => {
               </View>
               {/* _____________________________________________________________________________________*/}
               {/* Equipe B */}
-              <View style={styles.teamContainer}>
+              <View
+                style={[styles.teamContainer, { width: "90%", marginTop: 5 }]}
+              >
                 <Text style={styles.teamName}>EQUIPE B</Text>
 
                 {/* SET/FALTAS */}
@@ -228,7 +309,7 @@ const PlacarEletronico = ({ navigation }) => {
                   <TouchableOpacity
                     style={styles.circleButton}
                     onPress={async () => {
-                      setSetFaltasB(setFaltasB + 1);
+                      setSetFaltasB((prev) => (prev >= 20 ? 0 : prev + 1));
                       await sendCmd(0x07);
                     }}
                   />
@@ -241,7 +322,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setServicoB(servicoB === "Sim" ? "Não" : "Sim");
+                        setServicoB(servicoB === "S" ? "N" : "S");
                         await sendCmd(0x08);
                       }}
                     />
@@ -251,7 +332,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPedidoTempoB(pedidoTempoB + 1);
+                        setPedidoTempoB((prev) => (prev >= 2 ? 0 : prev + 1));
                         await sendCmd(0x09);
                       }}
                     />
@@ -265,7 +346,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPontosB(pontosB + 1);
+                        setPontosB((prev) => (prev >= 199 ? 0 : prev + 1));
                         await sendCmd(0x03);
                       }}
                     />
@@ -276,7 +357,7 @@ const PlacarEletronico = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.circleButton}
                       onPress={async () => {
-                        setPontosB(pontosB - 1);
+                        setPontosB((prev) => (prev > 0 ? prev - 1 : prev));
                         await sendCmd(0x0a);
                       }}
                     />
@@ -287,7 +368,7 @@ const PlacarEletronico = ({ navigation }) => {
             </View>
           </View>
         </View>
-        <View style={styles.geralContainer}>
+        <View style={styles.geralContainer1}>
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.circleButton1}
@@ -296,28 +377,37 @@ const PlacarEletronico = ({ navigation }) => {
                 await sendCmd(0x0b);
               }}
             />
-            <Text style={styles.info}>CRONÔMETRO</Text>
+            <Text style={styles.info2}>CRONÔMETRO</Text>
           </View>
 
           <View style={styles.row}>
             <View style={styles.section}>
               <TouchableOpacity
-                style={styles.circleButton}
+                style={styles.circleButton2}
                 onPress={async () => {
                   setAlarme(alarme === "Ligado" ? "Desligado" : "Ligado");
                   await sendCmd(0x0c);
                 }}
               />
-              <Text style={styles.info}>ALARME</Text>
+              <Text style={styles.info3}>ALARME</Text>
             </View>
             <View style={styles.section}>
               <TouchableOpacity
-                style={styles.circleButton}
+                style={styles.circleButton2}
                 onPress={async () => {
+                  //zerar tudo
+                  resetarPlacar();
                   await sendCmd(0x0d);
                 }}
               />
-              <Text style={styles.info}>RESET</Text>
+              <Text style={styles.info3}>RESET</Text>
+            </View>
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.circleButton2}
+                onPress={handlePeriodoPress}
+              />
+              <Text style={styles.info3}>PERÍODO</Text>
             </View>
           </View>
         </View>
@@ -325,172 +415,5 @@ const PlacarEletronico = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#02253D",
-    padding: 8,
-    marginTop: 5,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 30,
-    color: "#003366", // azul escuro CEFET
-  },
-  mainContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "flex-start",
-  },
-  teamContainer: {
-    backgroundColor: "#06568F", // azul forte bonito
-    borderRadius: 20,
-    padding: 20,
-    width: 185,
-    margin: 10,
-    marginTop: 20,
-    height: 300,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  circleButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5,
-  },
-  circleButton1: {
-    width: 200,
-    height: 50,
-    borderRadius: 20,
-    marginTop: -10,
-    //cor vermelha
-    backgroundColor: "#FF0000",
-    //contorno branco
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5,
-  },
-  servico: {
-    width: "40%",
-    padding: 8,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    marginBottom: 10,
-    marginTop: -10,
-    marginLeft: "31%",
-  },
-  teamName: {
-    fontSize: 27,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  section: {
-    alignItems: "center",
-  },
-  info: {
-    fontSize: 17,
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  placarResumoContainer: {
-    backgroundColor: "#02253D", // azul forte bonito
-    borderRadius: 20,
-    height: 280,
-    padding: 20,
-    marginHorizontal: 20,
-    marginTop: -10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.9,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  resumoEquipe: {
-    flex: 1,
-    backgroundColor: "#06568F", // azul forte bonito
-    borderRadius: 10,
-    padding: 10,
-    marginTop: -10,
-    marginHorizontal: 4,
-    alignItems: "center",
-    gap: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-    borderWidth: 3,
-    borderColor: "#FFFFFF", // Borda branca
-  },
-  resumoEquipe1: {
-    width: "100%", // ocupa a largura total do container
-    backgroundColor: "#06568F",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginTop: -16,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 1,
-    shadowRadius: 2,
-    elevation: 2,
-    borderWidth: 3,
-    borderColor: "#FFFFFF", // Borda branca
-    shadowColor: "#000", // Cor da sombra
-  },
-  geralContainer: {
-    backgroundColor: "#06568F", // azul forte bonito
-    borderRadius: 20,
-    padding: 20,
-    width: 300,
-    margin: 40,
-    marginTop: 2,
-    height: 160,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    width: "100%",
-    marginVertical: 8,
-  },
-  pointsTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginTop: -20,
-    marginHorizontal: 10,
-  },
-});
 
 export default PlacarEletronico;

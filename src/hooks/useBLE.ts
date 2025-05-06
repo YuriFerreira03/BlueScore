@@ -123,7 +123,7 @@ const useBLE = () => {
       await connectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         CHARACTERISTIC_UUID,
-        btoa("\x01")
+        btoa("")
       );
       console.log("📤 Comando de teste enviado após conexão");
     } catch (error) {
